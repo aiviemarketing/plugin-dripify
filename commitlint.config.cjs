@@ -24,7 +24,7 @@ module.exports = {
     ],
     "scope-enum": [
       2,
-      "always",
+      "optional",
       [
         // Dripify specific
         "contact",

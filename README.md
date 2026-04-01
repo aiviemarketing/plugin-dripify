@@ -118,4 +118,6 @@ See `LICENSE` and `NOTICE` for details.
 
 ## Attribution
 
-Originally developed by [Aivie](https://aivie.ch/en/).
+Originally developed by <a href="https://aivie.ch/en/?utm_source=github&utm_medium=recaptcha&utm_campaign=opensource&utm_content=contact>">Aivie</a><br>
+<a href="https://aivie.ch/en/?utm_source=github&utm_medium=dripify&utm_campaign=opensource&utm_content=contact>">
+  <img width="200px" src="https://cdn.aivie.ch/media/wp/2021/06/19131704/logo-aivie-fast-kein-rand-400w.png"></img></a>
