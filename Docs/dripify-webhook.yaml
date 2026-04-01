@@ -1,0 +1,216 @@
+openapi: 3.1.0
+info:
+  title: Aivie Dripify-Compatible Webhook API
+  version: 1.0.0
+  summary: Webhook endpoint for ingesting external contact data into Aivie.
+  description: >
+    This endpoint accepts contact payloads (e.g. from Dripify).
+    Field names remain unchanged, but each field includes a suggested
+    mapping to Aivie (Mautic) contact fields.
+
+servers:
+  - url: https://your-aivie-domain.tld
+
+tags:
+  - name: Contact Webhook
+    description: External contact ingestion endpoint
+
+paths:
+  /dripify/webhook:
+    post:
+      tags:
+        - Contact Webhook
+      summary: Create or update contact from external payload
+      operationId: postExternalContact
+      description: >
+        Public Dripify webhook endpoint. The first valid email from `email`,
+        `manualEmail`, `corporateEmail`, or `linkedInEmail` is used as the
+        Aivie contact's primary email for the upsert.
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalContactPayload'
+            examples:
+              example:
+                value:
+                  firstName: Bill
+                  lastName: Gates
+                  location: Seattle Washington
+                  city: Seattle
+                  country: USA
+                  premium: Yes
+                  link: https://www.linkedin.com/in/williamhgates/
+                  website: https://www.gatesnotes.com/
+                  email: b.gates@microsoft.com
+                  manualEmail: b.gates.manual@microsoft.com
+                  corporateEmail: b.gates.corporate@microsoft.com
+                  linkedInEmail: b.gates.linkedin@microsoft.com
+                  phone: "+845-476-0128"
+                  company: Bill & Melinda Gates Foundation
+                  companyWebsite: https://www.gatesnotes.com/
+                  position: Co-chair
+                  industry: Charity
+                  education: Harvard University
+                  hookDate: 01/04/2026
+                  numberOfCompanyEmployees: "120"
+                  numberOfCompanyFollowers: "750"
+
+      responses:
+        '200':
+          description: Contact processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+
+  schemas:
+    ExternalContactPayload:
+      type: object
+      additionalProperties: false
+      properties:
+
+        firstName:
+          type: string
+          description: "Aivie mapping: firstname"
+
+        lastName:
+          type: string
+          description: "Aivie mapping: lastname"
+
+        location:
+          type: string
+          description: "Aivie mapping: dripify_location (custom field)"
+
+        city:
+          type: string
+          description: "Aivie mapping: city"
+
+        country:
+          type: string
+          description: "Aivie mapping: country"
+
+        premium:
+          type: string
+          description: "Aivie mapping: dripify_premium (custom field, convert Yes/No to 1/0)"
+
+        link:
+          type: string
+          format: uri
+          description: "Aivie mapping: linkedin"
+
+        website:
+          type: string
+          format: uri
+          description: "Aivie mapping: website"
+
+        email:
+          type: string
+          format: email
+          description: "Aivie mapping: email (first choice for the primary identifier)"
+
+        manualEmail:
+          type: string
+          format: email
+          description: "Aivie mapping: dripify_manual_email (custom field, second email fallback)"
+
+        corporateEmail:
+          type: string
+          format: email
+          description: "Aivie mapping: dripify_corporate_email (custom field, third email fallback)"
+
+        linkedInEmail:
+          type: string
+          format: email
+          description: "Aivie mapping: dripify_linkedin_email (custom field, fourth email fallback)"
+
+        phone:
+          type: string
+          description: "Aivie mapping: phone"
+
+        company:
+          type: string
+          description: "Aivie mapping: company"
+
+        companyWebsite:
+          type: string
+          format: uri
+          description: "Aivie mapping: companywebsite"
+
+        position:
+          type: string
+          description: "Aivie mapping: position"
+
+        industry:
+          type: string
+          description: "Aivie mapping: companyindustry"
+
+        education:
+          type: string
+          description: "Aivie mapping: education (custom field)"
+
+        hookDate:
+          type: string
+          description: "Aivie mapping: dripify_hook_date (custom field, convert DD/MM/YYYY to YYYY-MM-DD)"
+
+        numberOfCompanyEmployees:
+          type: string
+          description: "Aivie mapping: dripify_company_employees (integer custom field)"
+
+        numberOfCompanyFollowers:
+          type: string
+          description: "Aivie mapping: dripify_company_followers (integer custom field)"
+
+      anyOf:
+        - required: [email]
+        - required: [manualEmail]
+        - required: [corporateEmail]
+        - required: [linkedInEmail]
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        action:
+          type: string
+          enum: [created, updated]
+          example: created
+        contactId:
+          type: integer
+          example: 123
+        message:
+          type: string
+          example: Contact processed successfully
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: validation_error
+        message:
+          type: string
+          example: No usable email field provided

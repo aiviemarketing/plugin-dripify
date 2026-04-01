@@ -1,0 +1,16 @@
+{
+  "name": "adiux/aivie-dripify-bundle",
+  "description": "Dripify webhook integration for Mautic",
+  "license": "GPL-3.0-or-later",
+  "type": "mautic-plugin",
+  "version": "1.0.0",
+  "keywords": ["mautic", "plugin", "webhook", "dripify"],
+  "require": {
+    "php": ">=8.0 <8.1",
+    "mautic/core-lib": "^5.0"
+  },
+  "extra": {
+    "install-directory-name": "AivieDripifyBundle"
+  },
+  "minimum-stability": "dev"
+}
