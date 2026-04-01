@@ -16,7 +16,7 @@ tags:
     description: External contact ingestion endpoint
 
 paths:
-  /dripify/webhook:
+  /dripify/webhook/{secret}:
     post:
       tags:
         - Contact Webhook
@@ -25,7 +25,9 @@ paths:
       description: >
         Public Dripify webhook endpoint. The first valid email from `email`,
         `manualEmail`, `corporateEmail`, or `linkedInEmail` is used as the
-        Aivie contact's primary email for the upsert.
+        Aivie contact's primary email for the upsert. If a webhook secret is
+        configured in the Dripify integration settings, callers must use the
+        callback URL including the secret as the final path segment.
 
       requestBody:
         required: true

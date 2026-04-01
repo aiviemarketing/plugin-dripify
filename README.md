@@ -15,13 +15,16 @@ Aivie plugin that exposes a public webhook for importing Dripify contacts into A
 
 Copy the plugin into your Mautic `plugins/` directory as `AivieDripifyBundle`, then install or refresh plugins from the Mautic/Aivie admin interface.
 
-After installation, open the `Dripify` integration in the admin UI and publish it. The webhook endpoint is only available while the integration is published.
+After installation, open the `Dripify` integration in the admin UI and publish it. The integration settings expose the callback URL and an optional shared secret. If a secret is configured, it is appended to the callback URL. The webhook endpoint is only available while the integration is published.
 
 ## Webhook
 
 - Method: `POST`
 - Path: `/dripify/webhook`
 - Content-Type: `application/json`
+- Optional secret path: `/dripify/webhook/SECRET`
+
+If a webhook secret is configured in the Dripify integration settings, requests must use the callback URL exactly as shown there so the secret is appended as the final path segment.
 
 Example request:
 
