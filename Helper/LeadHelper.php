@@ -11,6 +11,7 @@ use Mautic\LeadBundle\Exception\ImportFailedException;
 use Mautic\LeadBundle\Helper\IdentifyCompanyHelper;
 use Mautic\LeadBundle\Model\CompanyModel;
 use Mautic\LeadBundle\Model\LeadModel;
+use Mautic\LeadBundle\Entity\Tag;
 
 class LeadHelper
 {
@@ -51,6 +52,8 @@ class LeadHelper
         }
 
         $lead->setManipulator(new LeadManipulator('dripify', 'webhook', null, 'Dripify webhook'));
+
+        $lead->addTag(new Tag('dripify'));
 
         $this->leadModel->setFieldValues($lead, $leadFields, false, false);
         $this->leadModel->saveEntity($lead);
