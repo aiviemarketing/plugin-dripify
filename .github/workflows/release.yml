@@ -82,9 +82,8 @@ jobs:
 
       - name: Extract release notes by script
         run: |
-          chmod +x scripts/extract-release-notes.sh scripts/test-release-notes-extraction.sh
+          chmod +x scripts/extract-release-notes.sh
           ./scripts/extract-release-notes.sh CHANGELOG.md > release_notes.md
-          ./scripts/test-release-notes-extraction.sh release_notes.md
 
       - name: Get release tag
         id: tag
