@@ -19,6 +19,7 @@ module.exports = {
         "test",
         "build",
         "ci",
+        "repo",
         "security",
       ],
     ],

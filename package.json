@@ -3,7 +3,11 @@
   "version": "6.0.0",
   "private": false,
   "scripts": {
-    "lint:commit": "commitlint --edit"
+    "changelog:preview": "standard-version --dry-run",
+    "lint:commit": "commitlint --edit",
+    "release:patch": "gh workflow run 'Release' -r main -f bump=patch -f post_to_slack=true",
+    "release:minor": "gh workflow run 'Release' -r main -f bump=minor -f post_to_slack=true",
+    "release:major": "gh workflow run 'Release' -r main -f bump=major -f post_to_slack=true"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",

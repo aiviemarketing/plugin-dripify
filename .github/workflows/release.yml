@@ -1,0 +1,136 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump (auto, patch, minor, major)"
+        required: true
+        default: auto
+        type: choice
+        options: [auto, patch, minor, major]
+      post_to_slack:
+        description: "Post release notes to Slack"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write  # push commit/tag + create release
+
+# Only one release at a time; avoids two runs both bumping from the same base.
+concurrency:
+  group: release-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main  # change if your default branch differs
+
+      # main may have moved after the workflow was queued; bump on latest tip.
+      - name: Sync with origin/main
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Use Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Ensure jq is installed
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Configure git user
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Validate package version
+        run: |
+          CURRENT_VERSION="$(jq -r '.version // empty' package.json)"
+          if [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ]; then
+            echo "Invalid version in package.json: $CURRENT_VERSION"
+            exit 1
+          fi
+          if ! [[ "$CURRENT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-].+)?$ ]]; then
+            echo "Version is not semver-like: $CURRENT_VERSION"
+            exit 1
+          fi
+
+      - name: Run standard-version
+        run: |
+          STANDARD_VERSION_ARGS="--no-verify --infile CHANGELOG.md --packageFiles package.json --bumpFiles package.json"
+          if [ "${{ inputs.bump }}" = "auto" ]; then
+            npx standard-version $STANDARD_VERSION_ARGS
+          else
+            npx standard-version -r "${{ inputs.bump }}" $STANDARD_VERSION_ARGS
+          fi
+
+      - name: Capture new version
+        run: echo "NEW_VERSION=$(jq -r .version package.json)" >> "$GITHUB_ENV"
+
+      - name: Extract release notes by script
+        run: |
+          chmod +x scripts/extract-release-notes.sh scripts/test-release-notes-extraction.sh
+          ./scripts/extract-release-notes.sh CHANGELOG.md > release_notes.md
+          ./scripts/test-release-notes-extraction.sh release_notes.md
+
+      - name: Get release tag
+        id: tag
+        run: echo "name=$(git describe --tags --abbrev=0)" >> "$GITHUB_OUTPUT"
+
+      - name: Push commit and tag
+        run: git push --follow-tags origin HEAD:main
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          name: ${{ steps.tag.outputs.name }}
+          body_path: release_notes.md
+          generate_release_notes: false
+          prerelease: ${{ contains(env.NEW_VERSION, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post release notes to Slack
+        if: inputs.post_to_slack
+        continue-on-error: true
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
+            echo "SLACK_WEBHOOK_URL secret not set"; exit 1;
+          fi
+          CHANGELOG_URL="https://docs.google.com/spreadsheets/d/15IYatyxS3gP-usK8Hd1bhCCO4yUHpb_nItOj4hrHYFM/edit"
+          REPO_NAME="${GITHUB_REPOSITORY##*/}"
+          REPO_NAME="${REPO_NAME//-/ }"
+
+          # Build Block Kit: header + (optional) notes + link section
+          header=$(jq -n --arg r "$REPO_NAME" --arg v "$NEW_VERSION" \
+            '{type:"header",text:{type:"plain_text",text:("New Release: " + $r + " - v" + $v)}}')
+          divider='{"type":"divider"}'
+          link=$(jq -n --arg url "$CHANGELOG_URL" '{type:"section",text:{type:"mrkdwn",text:("<" + $url + "|View full changelog>")}}')
+
+          if [ -s release_notes.md ]; then
+            notes_block=$(jq -n --rawfile n release_notes.md '{type:"section",text:{type:"mrkdwn",text:($n | rtrimstr("\n"))}}')
+            payload=$(jq -n --argjson h "$header" --argjson d "$divider" --argjson n "$notes_block" --argjson l "$link" \
+              '{blocks: [$h, $d, $n, $l]}')
+          else
+            payload=$(jq -n --argjson h "$header" --argjson d "$divider" --argjson l "$link" \
+              '{blocks: [$h, $d, $l]}')
+          fi
+
+          curl -sS -H 'Content-Type: application/json' -d "$payload" "$SLACK_WEBHOOK_URL"
