@@ -19,17 +19,18 @@ module.exports = {
         "test",
         "build",
         "ci",
-        "repo",
         "security",
       ],
     ],
     "scope-enum": [
       2,
-      "optional",
+      "always",
       [
         // Dripify specific
         "contact",
         "company",
+        "ops",
+        "repo",
       ],
     ],
     "type-case": [2, "always", "lower-case"],

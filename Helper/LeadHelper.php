@@ -53,7 +53,9 @@ class LeadHelper
 
         $lead->setManipulator(new LeadManipulator('dripify', 'webhook', null, 'Dripify webhook'));
 
-        $lead->addTag(new Tag('dripify'));
+        $tagName = sprintf('dripify-campaign-%s', date('Y-m'));
+        $lead->addTag(new Tag('dripify-campaign'));
+        $lead->addTag(new Tag($tagName));
 
         $this->leadModel->setFieldValues($lead, $leadFields, false, false);
         $this->leadModel->saveEntity($lead);

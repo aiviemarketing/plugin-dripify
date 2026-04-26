@@ -61,6 +61,8 @@ class PublicController extends CommonController
                 throw new \InvalidArgumentException('Request body must be a JSON object.');
             }
 
+            $logger->debug('Dripify webhook received.', $payload);
+
             $this->validatePayload($payload);
 
             $result = $webhookHandler->process($payload);
