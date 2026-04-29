@@ -63,7 +63,7 @@ class PublicController extends CommonController
 
             $logger->debug('Dripify webhook received.', $payload);
 
-            $this->validatePayload($payload);
+            $this->validatePayload($payload, $logger);
 
             $result = $webhookHandler->process($payload);
             $statusCode = 'created' === ($result['action'] ?? null)
@@ -130,7 +130,7 @@ class PublicController extends CommonController
     /**
      * @param array<string, mixed> $payload
      */
-    private function validatePayload(array $payload): void
+    private function validatePayload(array $payload, LoggerInterface $logger): void
     {
         $allowedFields = [
             'firstName',
@@ -154,19 +154,22 @@ class PublicController extends CommonController
             'hookDate',
             'numberOfCompanyEmployees',
             'numberOfCompanyFollowers',
+            'conversation',
+            'campaignName',
         ];
 
         $unknownFields = array_diff(array_keys($payload), $allowedFields);
         if ([] !== $unknownFields) {
-            throw new \InvalidArgumentException('Unknown fields are not allowed.');
+            $logger->warning('AivieDripify:PublicController: Unknown fields stripped from payload', ['fields' => array_values($unknownFields)]);
+            $payload = array_intersect_key($payload, array_flip($allowedFields));
         }
 
         if (empty($payload['link']) || !is_string($payload['link'])) {
-            throw new \InvalidArgumentException('Field "link" is required and must be a string.');
-        }
-
-        if (false === filter_var($payload['link'], FILTER_VALIDATE_URL)) {
-            throw new \InvalidArgumentException('Field "link" must be a valid URL.');
+            $logger->warning('AivieDripify:PublicController: Field "link" is missing or not a string, stripping from payload');
+            unset($payload['link']);
+        } elseif (false === filter_var($payload['link'], FILTER_VALIDATE_URL)) {
+            $logger->warning('AivieDripify:PublicController: Field "link" is not a valid URL, stripping from payload', ['link' => $payload['link']]);
+            unset($payload['link']);
         }
 
         $stringFields = [
